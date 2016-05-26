@@ -24,7 +24,6 @@ try {
     assert($ex);
 }
 
-
 //=================================================================
 // 接口实现无构造函数
 interface IHelloService1 {
@@ -43,6 +42,12 @@ $box[IHelloService1::class] = HelloService1::class;
 assert($box(function(IHelloService1 $hello) {
    return $hello->hello(TEST_VAR_NAME);
 }) === "hello " . TEST_VAR_NAME);
+
+$closure = $box->inject(function(IHelloService1 $hello) {
+    return $hello->hello(TEST_VAR_NAME);
+});
+
+assert($closure() === "hello " . TEST_VAR_NAME);
 
 //=================================================================
 // 接口实现有构造函数
@@ -162,7 +167,7 @@ class Singleton implements SingletonService {
 }
 
 $box[SingletonService::class] = Singleton::class;
-$box->once(SingletonService::class); // 只实例化一次
+$box->once(Singleton::class); // 只实例化一次
 
 assert($box(function(SingletonService $singleton) {
     return $singleton->getCount();
@@ -173,3 +178,28 @@ assert($box(function(SingletonService $singleton) {
 assert($box(function(SingletonService $singleton) {
         return $singleton->getCount();
     }) === 1);
+
+//=================================================================
+
+// inject
+interface XService {
+    public function X($arg);
+}
+
+class XServiceImpl implements XService {
+    public function X($arg) {
+        return __METHOD__ . " $arg";
+    }
+}
+
+$box = new IoC;
+$box[XService::class] = XServiceImpl::class;
+// $box->once(XServiceImpl::class);
+
+function doSomething(XService $xService) {
+    return $xService->x(__FUNCTION__);
+}
+
+$doSomething = $box->inject(__NAMESPACE__ . "\\doSomething");
+
+assert($doSomething() === "xiaofeng\\XServiceImpl::X xiaofeng\\doSomething");

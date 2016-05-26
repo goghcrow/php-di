@@ -8,6 +8,8 @@
 
 namespace xiaofeng;
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . "Call.php";
+
 use Iterator;
 use ArrayAccess;
 use Countable;
@@ -16,6 +18,7 @@ use ReflectionMethod;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
+
 
 /**
  * Class IoC 依赖注入容器
@@ -51,12 +54,12 @@ class IoC implements ArrayAccess, Countable, Iterator{
     }
 
     protected function _instanceNew(ReflectionClass $clazz) {
-        if(!$clazz->isInstantiable()) {
+        if (!$clazz->isInstantiable()) {
             throw new IoCException("Cannot instantiate class {$clazz->name}");
         }
         $ctorMethod = $clazz->getConstructor();
         // PHP7: try {} catch (Throwable $e) { throw new IoCException($e->getMessage(), $e->getCode()); }
-        if($ctorMethod !== null) {
+        if ($ctorMethod !== null) {
             return $clazz->newInstanceArgs($this->getArguments($ctorMethod));
         } else {
             return $clazz->newInstanceWithoutConstructor();
@@ -65,7 +68,7 @@ class IoC implements ArrayAccess, Countable, Iterator{
 
     protected function _instanceOnce(ReflectionClass $clazz) {
         $name = $clazz->name;
-        if(!isset($this->instances[$name])) {
+        if (!isset($this->instances[$name])) {
             $this->instances[$name] = $this->_instanceNew($clazz);
         }
         return $this->instances[$name];
@@ -73,7 +76,7 @@ class IoC implements ArrayAccess, Countable, Iterator{
 
     protected function _instance(ReflectionClass $clazz) {
         $isSingleton = isset($this->singletonClassNames[$clazz->name]);
-        if($isSingleton) {
+        if ($isSingleton) {
             return $this->_instanceOnce($clazz);
         } else {
             return $this->_instanceNew($clazz);
@@ -82,25 +85,25 @@ class IoC implements ArrayAccess, Countable, Iterator{
 
     protected function instance(ReflectionClass $parameterClazz) {
         $clazzName = $parameterClazz->name;
-        if(interface_exists($clazzName)) {
-            if(!isset($this->dependencies[$clazzName])) {
+        if (interface_exists($clazzName)) {
+            if (!isset($this->dependencies[$clazzName])) {
                 throw new IoCException("Interface \"{$clazzName}\" Implements Class Not Found");
             }
             // 处理多态
             $implementedClazzName = (string) $this->dependencies[$clazzName];
-            if(!class_exists($implementedClazzName)) {
+            if (!class_exists($implementedClazzName)) {
                 throw new IoCException("Interface \"{$clazzName}\" Implements Class \"{$implementedClazzName}\" Not Found");
             }
-            if(!$this->isImplements($implementedClazzName, $clazzName)) {
+            if (!$this->isImplements($implementedClazzName, $clazzName)) {
                 throw new IoCException("{$implementedClazzName} Does Not Implements {$clazzName}");
             }
             return $this->_instance(new ReflectionClass($implementedClazzName));
-        } else if(class_exists($clazzName)) {
+        } else if (class_exists($clazzName)) {
             // 处理多态
-            if(isset($this->dependencies[$clazzName])) {
+            if (isset($this->dependencies[$clazzName])) {
                 $subClazzName = (string) $this->dependencies[$clazzName];
                 // 类不存在 is_subclass_of 返回 false
-                if(!is_subclass_of($subClazzName, $clazzName)) {
+                if (!is_subclass_of($subClazzName, $clazzName)) {
                     throw new IoCException("{$subClazzName} Is Not SubClass Of {$clazzName}");
                 }
                 return $this->_instance(new ReflectionClass($subClazzName));
@@ -130,13 +133,13 @@ class IoC implements ArrayAccess, Countable, Iterator{
         foreach($method->getParameters() as $parameter) {
             // TODO: php7 if($parameter->hasType()) { $reflectionType = $parameter->getType(); }
             $parameterClazz = $parameter->getClass();
-            if($parameterClazz != null) {
+            if ($parameterClazz != null) {
                 // 有类型提示 function(TypeHint $para, ...), 根据TypeHint查找依赖
                 $arguments[] = $this->instance($parameterClazz);
             } else {
                 // 无类型提示 function($argName) 根据实参变量名"argName"查找依赖
                 $name = $parameter->name;
-                if(!isset($this->dependencies[$name])) {
+                if (!isset($this->dependencies[$name])) {
                     throw new IoCException("ParameterName \${$name} Not Found");
                 }
                 $arguments[] = $this->dependencies[$name];
@@ -145,8 +148,27 @@ class IoC implements ArrayAccess, Countable, Iterator{
         return $arguments;
     }
 
+    /**
+     * 参数注入
+     * @param $callable
+     * @return Closure
+     */
+    public function inject($callable) {
+        try {
+            $closure = Call::getClosure($callable);
+        } catch (CallException $ex) {
+            throw new IoCException($ex->getMessage(), $ex->getCode());
+        }
+
+        $method = new ReflectionMethod($closure, "__invoke");
+        $arguments = $this->getArguments($method);
+        return function() use($closure, $arguments) {
+            return call_user_func_array($closure, $arguments);
+        };
+    }
+
     public function __invoke(Closure $closure) {
-        $method = new \ReflectionMethod($closure, "__invoke");
+        $method = new ReflectionMethod($closure, "__invoke");
         $arguments = $this->getArguments($method);
         return call_user_func_array($closure, $arguments);
     }
@@ -155,12 +177,12 @@ class IoC implements ArrayAccess, Countable, Iterator{
     public function offsetGet($offset) { return isset($this->dependencies[$offset]) ? $this->dependencies[$offset] : null; }
     public function offsetSet($offset, $value) { $this->dependencies[$offset] = $value; }
     public function offsetUnset($offset) { unset($this->dependencies[$offset]); }
-    public function count() { return \count($this->dependencies); }
-    public function current() { return \current($this->dependencies); }
-    public function next() { return \next($this->dependencies); }
-    public function key() { return \key($this->dependencies); }
-    public function valid() { return \current($this->dependencies) !== false; }
-    public function rewind() { return \reset($this->dependencies); }
+    public function count() { return count($this->dependencies); }
+    public function current() { return current($this->dependencies); }
+    public function next() { return next($this->dependencies); }
+    public function key() { return key($this->dependencies); }
+    public function valid() { return current($this->dependencies) !== false; }
+    public function rewind() { return reset($this->dependencies); }
 }
 
 class IoCException extends RuntimeException {}

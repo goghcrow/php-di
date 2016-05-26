@@ -121,3 +121,11 @@ $box(function(SingletonValid $model, XTools $tools, $conf) {
 //    echo $model->a(), PHP_EOL;
 //    echo $tools->x(), PHP_EOL;
 });
+
+$closure = $box->inject(function(SingletonValid $model, XTools $tools, $conf) {
+    echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
+    echo $model->a(), PHP_EOL;
+    echo $tools->x(), PHP_EOL;
+});
+
+$closure();
