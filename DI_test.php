@@ -1,24 +1,24 @@
 <?php
 namespace xiaofeng;
-require __DIR__ . "/Ioc.php";
+require __DIR__ . "/DI.php";
 
-$box = new IoC;
+$di = new DI;
 define("TEST_VAR_NAME", "xiaofeng");
 
 
 //=================================================================
 // 添加标量与数组依赖
-$box["x"] = 1;
-$box["conf"] = [
+$di["x"] = 1;
+$di["conf"] = [
     "v" => 2,
 ];
 
-assert($box(function($x, $conf) {
+assert($di(function($x, $conf) {
     return $x + $conf["v"];
 }) === 3);
 
 try {
-    $box(function($not_exist) {});
+    $di(function($not_exist) {});
     assert(false);
 } catch (IoCException $ex) {
     assert($ex);
@@ -37,13 +37,13 @@ class HelloService1 implements IHelloService1 {
 }
 
 // 添加借接口服务依赖
-$box[IHelloService1::class] = HelloService1::class;
+$di[IHelloService1::class] = HelloService1::class;
 
-assert($box(function(IHelloService1 $hello) {
+assert($di(function(IHelloService1 $hello) {
    return $hello->hello(TEST_VAR_NAME);
 }) === "hello " . TEST_VAR_NAME);
 
-$closure = $box->inject(function(IHelloService1 $hello) {
+$closure = $di->inject(function(IHelloService1 $hello) {
     return $hello->hello(TEST_VAR_NAME);
 });
 
@@ -67,12 +67,12 @@ class HelloService2 implements IHelloService2 {
     }
 }
 
-$box["name"] = TEST_VAR_NAME;
+$di["name"] = TEST_VAR_NAME;
 
 // 添加借接口服务依赖
-$box[IHelloService2::class] = HelloService2::class;
+$di[IHelloService2::class] = HelloService2::class;
 
-assert($box(function(IHelloService2 $hello) {
+assert($di(function(IHelloService2 $hello) {
         return $hello->hello();
     }) === "hello " . TEST_VAR_NAME);
 
@@ -81,9 +81,9 @@ assert($box(function(IHelloService2 $hello) {
 interface ITest1 {}
 class Test1 {}
 
-$box[ITest1::class] = "Not_EXIST_CLASS";
+$di[ITest1::class] = "Not_EXIST_CLASS";
 try {
-    $box(function(ITest1 $test) {});
+    $di(function(ITest1 $test) {});
     assert(false);
 } catch (IoCException $ex) {
     assert($ex);
@@ -92,9 +92,9 @@ try {
 //=================================================================
 interface ITest2 {}
 class Test2 {}
-$box[ITest2::class] = Test2::class;
+$di[ITest2::class] = Test2::class;
 try {
-    $box(function(ITest2 $test) {});
+    $di(function(ITest2 $test) {});
     assert(false);
 } catch (IoCException $ex) {
     assert($ex);
@@ -115,7 +115,7 @@ class HelloService3 {
 // 类自动注入,无需添加
 // $box[HelloService3::class] =
 
-assert($box(function(HelloService3 $hello) {
+assert($di(function(HelloService3 $hello) {
     return $hello->hello();
 }) === "hello " . TEST_VAR_NAME);
 
@@ -142,14 +142,14 @@ class HelloService4 extends baseHelloService {
     }
 }
 
-$box["who"] = "someone";
+$di["who"] = "someone";
 
 // 父类或者虚类需要指定实现类
-$box[HelloService3::class] = HelloService4::class;
+$di[HelloService3::class] = HelloService4::class;
 
-assert($box(function(HelloService4 $hello) {
+assert($di(function(HelloService4 $hello) {
     return $hello->hello();
-}) === $box["who"] . " say hello " . TEST_VAR_NAME);
+}) === $di["who"] . " say hello " . TEST_VAR_NAME);
 
 //=================================================================
 // singleton
@@ -166,16 +166,16 @@ class Singleton implements SingletonService {
     }
 }
 
-$box[SingletonService::class] = Singleton::class;
-$box->once(Singleton::class); // 只实例化一次
+$di[SingletonService::class] = Singleton::class;
+$di->once(Singleton::class); // 只实例化一次
 
-assert($box(function(SingletonService $singleton) {
+assert($di(function(SingletonService $singleton) {
     return $singleton->getCount();
 }) === 1);
-assert($box(function(SingletonService $singleton) {
+assert($di(function(SingletonService $singleton) {
         return $singleton->getCount();
     }) === 1);
-assert($box(function(SingletonService $singleton) {
+assert($di(function(SingletonService $singleton) {
         return $singleton->getCount();
     }) === 1);
 
@@ -192,14 +192,14 @@ class XServiceImpl implements XService {
     }
 }
 
-$box = new IoC;
-$box[XService::class] = XServiceImpl::class;
+$di = new DI;
+$di[XService::class] = XServiceImpl::class;
 // $box->once(XServiceImpl::class);
 
 function doSomething(XService $xService) {
     return $xService->x(__FUNCTION__);
 }
 
-$doSomething = $box->inject(__NAMESPACE__ . "\\doSomething");
+$doSomething = $di->inject(__NAMESPACE__ . "\\doSomething");
 
 assert($doSomething() === "xiaofeng\\XServiceImpl::X xiaofeng\\doSomething");

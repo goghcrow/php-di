@@ -1,6 +1,8 @@
 <?php
 namespace xiaofeng;
-require __DIR__ . "/Ioc.php";
+require __DIR__ . "/DI.php";
+
+// ==========================================================================
 
 interface ServiceA {
     public function a();
@@ -80,49 +82,53 @@ class XTools {
     }
 }
 
-
-// 配置
+// =============================== CONFIG ===========================================
 // 1. 可以通过构造函数配置, 也可以通过数组访问配置
 // 2. 接口对应的实现需要配置
 // 3. 虚类对应的可实例化类也需要配置
 // 4. 普通类不需要配置
 // 5. 普通变量(标量,数组,对象实例)也不需要配置
 // 6. 嵌套依赖会自动通过构造函数注入
-$box = new IoC([
+$di = new DI([
     ServiceA::class => ServiceAImpl::class,
     ServiceB::class => ServiceBImpl::class,
     ServiceC::class => ServiceCImpl::class,
     ServiceD::class => ServiceDImpl::class,
 ]);
 
-$box[SingletonValid::class] = ModelA::class;
+$di[SingletonValid::class] = ModelA::class;
 
-$box["conf"] = [
+$di["conf"] = [
     "name" => __NAMESPACE__,
     "version" => 0.1,
 ];
+
 // 单例需要单独配置
-$box->once(ServiceAImpl::class);
-$box->once(ModelA::class);
+$di->once(ServiceAImpl::class);
+$di->once(ModelA::class);
 
-// APP
-$box(function(SingletonValid $model, XTools $tools, $conf) {
-//    echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
-//    echo $model->a(), PHP_EOL;
-//    echo $tools->x(), PHP_EOL;
+
+
+// ============================ APP ===========================================
+$di(function(SingletonValid $model, XTools $tools, $conf) {
+    echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
+    echo $model->a(), PHP_EOL;
+    echo $tools->x(), PHP_EOL;
 });
-$box(function(SingletonValid $model, XTools $tools, $conf) {
-//    echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
-//    echo $model->a(), PHP_EOL;
-//    echo $tools->x(), PHP_EOL;
+$di(function(SingletonValid $model, XTools $tools, $conf) {
+    echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
+    echo $model->a(), PHP_EOL;
+    echo $tools->x(), PHP_EOL;
 });
-$box(function(SingletonValid $model, XTools $tools, $conf) {
-//    echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
-//    echo $model->a(), PHP_EOL;
-//    echo $tools->x(), PHP_EOL;
+$di(function(SingletonValid $model, XTools $tools, $conf) {
+    echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
+    echo $model->a(), PHP_EOL;
+    echo $tools->x(), PHP_EOL;
 });
 
-$closure = $box->inject(function(SingletonValid $model, XTools $tools, $conf) {
+
+// or get a closure
+$closure = $di->inject(function(SingletonValid $model, XTools $tools, $conf) {
     echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
     echo $model->a(), PHP_EOL;
     echo $tools->x(), PHP_EOL;

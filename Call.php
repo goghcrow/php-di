@@ -7,11 +7,11 @@
 
 namespace xiaofeng;
 use Closure;
-use ReflectionClass;
-use ReflectionException;
 use ReflectionFunction;
-use RuntimeException;
+use ReflectionClass;
 use ReflectionMethod;
+use ReflectionException;
+use RuntimeException;
 
 class Call {
 
