@@ -5,7 +5,7 @@ require __DIR__ . "/Call.php";
 function my_callback_function() {
     return "hello world!";
 }
-$c = Call::getClosure(__NAMESPACE__ . "\\my_callback_function");
+$c = Call::toClosure(__NAMESPACE__ . "\\my_callback_function");
 assert($c() === "hello world!");
 
 class MyClass {
@@ -26,13 +26,13 @@ class MyClass {
 
 $myClass = new MyClass;
 
-$c = Call::getClosure([MyClass::class, "myStaticCallbackMethod"]);
+$c = Call::toClosure([MyClass::class, "myStaticCallbackMethod"]);
 assert($c() === MyClass::$staticProp);
 
-$c = Call::getClosure(MyClass::class . "::myStaticCallbackMethod");
+$c = Call::toClosure(MyClass::class . "::myStaticCallbackMethod");
 assert($c() === MyClass::$staticProp);
 
-$c = Call::getClosure([$myClass, "myCallbackMethod"]);
+$c = Call::toClosure([$myClass, "myCallbackMethod"]);
 assert($c() === $myClass->prop);
 
 
@@ -40,22 +40,22 @@ MyClass::$staticProp = "New Static Hello World!";
 $myClass->prop = "New Hello World!";
 
 
-$c = Call::getClosure([MyClass::class, "myStaticCallbackMethod"]);
+$c = Call::toClosure([MyClass::class, "myStaticCallbackMethod"]);
 assert($c() === MyClass::$staticProp);
 
-$c = Call::getClosure(MyClass::class . "::myStaticCallbackMethod");
+$c = Call::toClosure(MyClass::class . "::myStaticCallbackMethod");
 assert($c() === MyClass::$staticProp);
 
-$c = Call::getClosure([$myClass, "myCallbackMethod"]);
+$c = Call::toClosure([$myClass, "myCallbackMethod"]);
 assert($c() === $myClass->prop);
 
 $newMyClass = new MyClass;
 $newMyClass->prop = "New Hello World!";
-$c = Call::getClosure([$newMyClass, "myCallbackMethod"]);
+$c = Call::toClosure([$newMyClass, "myCallbackMethod"]);
 assert($c() === $newMyClass->prop);
 
 
-$c = Call::getClosure($myClass);
+$c = Call::toClosure($myClass);
 assert($c() === MyClass::$invokeProp);
 
 class A {
@@ -91,20 +91,20 @@ class B extends A {
     }
 }
 
-$c = Call::getClosure([B::class, "parent::who"]);
+$c = Call::toClosure([B::class, "parent::who"]);
 assert($c() === "A");
 
-$c = Call::getClosure([B::class, "self::who"]);
+$c = Call::toClosure([B::class, "self::who"]);
 assert($c() === "B");
 
 
 // !!! 非静态量 $this绑定到 new B
-$c = Call::getClosure([new B, "parent::hello"]);
+$c = Call::toClosure([new B, "parent::hello"]);
 assert($c() === "A Hello B");
 
 
 // !!! 静态变量 保持方法内作用域
-$c = Call::getClosure([new B, "parent::helloWithStatic"]);
+$c = Call::toClosure([new B, "parent::helloWithStatic"]);
 assert($c() === "A Hello A");
 
 //$a = new A;

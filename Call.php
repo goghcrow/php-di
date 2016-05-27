@@ -82,14 +82,10 @@ class Call {
 
     /**
      * callable ===> Closure
-     * @param $callable
+     * @param callable $callable
      * @return Closure
      */
-    public static function getClosure($callable) {
-        if (!is_callable($callable)) {
-            throw new CallException("First Argument Is Not A Callable");
-        }
-
+    public static function toClosure(callable $callable) {
         try {
             if (is_object($callable)) {
                 return self::getObjectCallableClosure($callable);
@@ -106,7 +102,7 @@ class Call {
             throw new CallException($ex->getMessage(), $ex->getCode());
         }
 
-        throw new CallException("Can Not Get Closure From The First Argument");
+        throw new CallException("Can Not Get Closure From Callable");
     }
 }
 

@@ -147,7 +147,7 @@ class DI implements ArrayAccess, Countable, Iterator{
      */
     public function inject($callable) {
         try {
-            $closure = Call::getClosure($callable);
+            $closure = Call::toClosure($callable);
         } catch (CallException $ex) {
             throw new IoCException($ex->getMessage(), $ex->getCode());
         }
