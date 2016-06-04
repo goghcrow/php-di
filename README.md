@@ -1,4 +1,4 @@
-## PHP DI容器
+## PHP Constructor injection Container
 
 5月24日从北京到杭州,下了高铁就去有赞面试~
 
@@ -8,12 +8,10 @@
 
 25号当即赶回北京,在飞驰的高铁窗边敲了一上午代码~把之前这个想法写了出来~
 
-~~~ php
+### interfaces.php
+~~~php
 <?php
 namespace xiaofeng;
-require __DIR__ . "/DI.php";
-
-// ==========================================================================
 
 interface ServiceA {
     public function a();
@@ -35,6 +33,13 @@ abstract class SingletonValid {
     static $count = 0;
     abstract function a();
 }
+~~~
+
+
+### implements.php
+~~~php
+<?php
+namespace xiaofeng;
 
 class ServiceAImpl extends SingletonValid implements ServiceA {
     public function a() {
@@ -92,6 +97,17 @@ class XTools {
         return __METHOD__;
     }
 }
+~~~
+
+
+### app.php
+~~~php
+<?php
+namespace xiaofeng;
+
+require __DIR__ . "/../src/CtorIC.php";
+require __DIR__ . "/interfaces.php";
+require __DIR__ . "/implements.php";
 
 // =============================== CONFIG ===========================================
 // 1. 可以通过构造函数配置, 也可以通过数组访问配置
@@ -100,46 +116,63 @@ class XTools {
 // 4. 普通类不需要配置
 // 5. 普通变量(标量,数组,对象实例)也不需要配置
 // 6. 嵌套依赖会自动通过构造函数注入
-$di = new DI([
-    ServiceA::class => ServiceAImpl::class,
-    ServiceB::class => ServiceBImpl::class,
-    ServiceC::class => ServiceCImpl::class,
-    ServiceD::class => ServiceDImpl::class,
+
+// 通过构造参数传入配置
+$di = new CtorIC([
+    ServiceA::class => ServiceAImpl::class, // 接口 => 实现
 ]);
 
-$di[SingletonValid::class] = ModelA::class;
+// 通过数组访问方式配置
+$di[ServiceB::class] = ServiceBImpl::class;
+$di[ServiceC::class] = ServiceCImpl::class;
+$di[ServiceD::class] = ServiceDImpl::class;
+$di[SingletonValid::class] = ModelA::class;  // 虚类 => 实现类
 
+// 配置普通变量
 $di["conf"] = [
     "name" => __NAMESPACE__,
     "version" => 0.1,
 ];
 
-// 单例需要单独配置
+// 单独配置单例
 $di->once(ServiceAImpl::class);
 $di->once(ModelA::class);
 
 
+return $di;
+~~~
 
-// ============================ APP ===========================================
-$di(function(SingletonValid $model, XTools $tools, $conf) {
+
+### main.php
+~~~php
+<?php
+namespace xiaofeng;
+
+/* @var $app CtorIC */
+$app = require __DIR__ . "/app.php";
+
+// 执行多次
+$app(function(SingletonValid $model, XTools $tools, $conf) {
     echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
     echo $model->a(), PHP_EOL;
     echo $tools->x(), PHP_EOL;
 });
-$di(function(SingletonValid $model, XTools $tools, $conf) {
+
+$app(function(SingletonValid $model, XTools $tools, $conf) {
     echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
     echo $model->a(), PHP_EOL;
     echo $tools->x(), PHP_EOL;
 });
-$di(function(SingletonValid $model, XTools $tools, $conf) {
+
+$app(function(SingletonValid $model, XTools $tools, $conf) {
     echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
     echo $model->a(), PHP_EOL;
     echo $tools->x(), PHP_EOL;
 });
 
 
-// or get a closure
-$closure = $di->inject(function(SingletonValid $model, XTools $tools, $conf) {
+// 获取一个注入完成的闭包
+$closure = $app->inject(function(SingletonValid $model, XTools $tools, $conf) {
     echo $conf["name"] . " V" . $conf["version"], PHP_EOL;
     echo $model->a(), PHP_EOL;
     echo $tools->x(), PHP_EOL;

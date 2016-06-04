@@ -6,6 +6,7 @@
  */
 
 namespace xiaofeng;
+
 use Closure;
 use ReflectionFunction;
 use ReflectionClass;
@@ -13,18 +14,66 @@ use ReflectionMethod;
 use ReflectionException;
 use RuntimeException;
 
+/**
+ * Class Call
+ *
+ * @package xiaofeng
+ */
 class Call {
 
+    /**
+     * 将callable转换为Closure
+     * @param callable $callable
+     * @return Closure
+     */
+    public static function toClosure(callable $callable) {
+        try {
+            if (is_object($callable)) {
+                return self::getObjectCallableClosure($callable);
+            }
+
+            if (is_string($callable)) {
+                return self::getStringCallableClosure($callable);
+            }
+
+            if (is_array($callable)) {
+                return self::getArrayCallableClosure($callable);
+            }
+        } catch (ReflectionException $ex) {
+            throw new CallException($ex->getMessage(), $ex->getCode());
+        }
+
+        throw new CallException("Can Not Get Closure From Callable");
+    }
+
+    /**
+     * 获取可调用对象的闭包
+     * 可调用对象:
+     * 1. \Closure
+     * 2. 实现了__invoke魔术方法的类实例
+     * (is_callable(class with method __invoke) === true)
+     *
+     * @param $callable
+     * @return Closure
+     */
     protected static function getObjectCallableClosure($callable) {
         if ($callable instanceof Closure) {
             return $callable;
         }
 
-        // is_callable(class with method __invoke) === true
         $method = new ReflectionMethod($callable, "__invoke");
         return $method->getClosure($callable);
     }
 
+    /**
+     * 获取可调用字符串的闭包
+     * 可调用字符串
+     * 1. class::method | static::method
+     * 2. function name
+     *
+     * @param string $callable
+     * @return Closure
+     */
     protected static function getStringCallableClosure($callable) {
         if (strpos($callable, "::") === false) {
             $function = new ReflectionFunction($callable);
@@ -32,19 +81,24 @@ class Call {
         }
 
         list($clazz, $method) = explode("::", $callable);
-        // static::method
         if ($clazz === "static") {
-            // TODO
-            // debug_print_backtrace(); // #2
             throw new CallException("Still Not Implement");
-            // $clazz = get_called_class();
         }
 
         $method = new ReflectionMethod($clazz, $method);
         return $method->getClosure();
     }
 
-    protected static function getArrayCallableClosure($callable) {
+    /**
+     * 获取可调用数组的闭包
+     * 可调用数组:
+     * 1. ["class", "[self|parent|static::]method"]
+     * 2. [object, "[self|parent|static::]method"]
+     *
+     * @param array $callable
+     * @return Closure
+     */
+    protected static function getArrayCallableClosure(array $callable) {
         list($clazz, $method) = $callable;
 
         if(strpos($method, "::") === false) {
@@ -73,36 +127,10 @@ class Call {
         }
 
         if ($clazzScope === "static") {
-            // TODO
             throw new CallException("Still Not Implement");
         }
 
         throw new CallException("Can Not Get A Closure From The Array Callable");
-    }
-
-    /**
-     * callable ===> Closure
-     * @param callable $callable
-     * @return Closure
-     */
-    public static function toClosure(callable $callable) {
-        try {
-            if (is_object($callable)) {
-                return self::getObjectCallableClosure($callable);
-            }
-
-            if (is_string($callable)) {
-                return self::getStringCallableClosure($callable);
-            }
-
-            if (is_array($callable)) {
-                return self::getArrayCallableClosure($callable);
-            }
-        } catch (ReflectionException $ex) {
-            throw new CallException($ex->getMessage(), $ex->getCode());
-        }
-
-        throw new CallException("Can Not Get Closure From Callable");
     }
 }
 

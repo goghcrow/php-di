@@ -1,8 +1,8 @@
 <?php
 namespace xiaofeng;
-require __DIR__ . "/../src/DI.php";
+require __DIR__ . "/../src/CtorIC.php";
 
-$di = new DI;
+$di = new CtorIC;
 define("TEST_VAR_NAME", "xiaofeng");
 
 
@@ -20,7 +20,7 @@ assert($di(function($x, $conf) {
 try {
     $di(function($not_exist) {});
     assert(false);
-} catch (IoCException $ex) {
+} catch (CtorICException $ex) {
     assert($ex);
 }
 
@@ -85,7 +85,7 @@ $di[ITest1::class] = "Not_EXIST_CLASS";
 try {
     $di(function(ITest1 $test) {});
     assert(false);
-} catch (IoCException $ex) {
+} catch (CtorICException $ex) {
     assert($ex);
 }
 
@@ -96,7 +96,7 @@ $di[ITest2::class] = Test2::class;
 try {
     $di(function(ITest2 $test) {});
     assert(false);
-} catch (IoCException $ex) {
+} catch (CtorICException $ex) {
     assert($ex);
 }
 
@@ -192,7 +192,7 @@ class XServiceImpl implements XService {
     }
 }
 
-$di = new DI;
+$di = new CtorIC;
 $di[XService::class] = XServiceImpl::class;
 // $box->once(XServiceImpl::class);
 
