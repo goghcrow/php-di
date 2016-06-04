@@ -1,6 +1,6 @@
 <?php
 namespace xiaofeng;
-require __DIR__ . "/DI.php";
+require __DIR__ . "/../src/DI.php";
 
 // ==========================================================================
 

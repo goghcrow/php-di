@@ -16,12 +16,11 @@ use Countable;
 use Closure;
 use ReflectionMethod;
 use ReflectionClass;
-use ReflectionException;
 use RuntimeException;
 
 
 /**
- * Class IoC 依赖注入容器
+ * Constructor Injection Container
  * @package xiaofeng
  *
  * [不负责autoload]

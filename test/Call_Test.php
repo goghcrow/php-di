@@ -1,6 +1,6 @@
 <?php
 namespace xiaofeng;
-require __DIR__ . "/Call.php";
+require __DIR__ . "/../src/Call.php";
 
 function my_callback_function() {
     return "hello world!";

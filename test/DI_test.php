@@ -1,6 +1,6 @@
 <?php
 namespace xiaofeng;
-require __DIR__ . "/DI.php";
+require __DIR__ . "/../src/DI.php";
 
 $di = new DI;
 define("TEST_VAR_NAME", "xiaofeng");
