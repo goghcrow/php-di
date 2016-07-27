@@ -186,7 +186,7 @@ $closure();
 
 @2016-07-27
 
-```
+```php
 interface IAA {}
 
 class AA implements IAA {
