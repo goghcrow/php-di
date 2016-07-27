@@ -180,3 +180,52 @@ $closure = $app->inject(function(SingletonValid $model, XTools $tools, $conf) {
 
 $closure();
 ~~~
+
+
+**自动测循环依赖**
+
+@2016-07-27
+
+```
+interface IAA {}
+
+class AA implements IAA {
+    function __construct(BB $b){}
+}
+
+class BB {
+    function __construct(CC $c){}
+}
+
+class CC {
+    function __construct(AA $a){}
+}
+
+class DD {
+    function __construct(EE $a){}
+}
+
+class EE {
+    function __construct(FF $f, IAA $a){}
+}
+
+class FF {}
+
+
+/*
+xiaofeng\DD -> xiaofeng\EE -> xiaofeng\AA -> xiaofeng\BB -> xiaofeng\CC -> xiaofeng\AA'
+*/
+
+$di = new CtorIC([
+    IAA::class => AA::class,
+]);
+
+
+try {
+    $di->make(DD::class);
+    assert(false);
+} catch (CircleDependencyException $ex) {
+    assert($ex->getMessage() ===
+        'Found Circle Dependency In Path xiaofeng\DD -> xiaofeng\EE -> xiaofeng\AA -> xiaofeng\BB -> xiaofeng\CC -> xiaofeng\AA');
+}
+```

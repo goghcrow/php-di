@@ -39,7 +39,9 @@ try {
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-class AA {
+interface IAA {}
+
+class AA implements IAA {
     function __construct(BB $b){}
 }
 
@@ -56,7 +58,7 @@ class DD {
 }
 
 class EE {
-    function __construct(FF $f, AA $a){}
+    function __construct(FF $f, IAA $a){}
 }
 
 class FF {}
@@ -66,7 +68,11 @@ class FF {}
 xiaofeng\DD -> xiaofeng\EE -> xiaofeng\AA -> xiaofeng\BB -> xiaofeng\CC -> xiaofeng\AA'
 */
 
-$di = new CtorIC;
+$di = new CtorIC([
+    IAA::class => AA::class,
+]);
+
+
 try {
     $di->make(DD::class);
     assert(false);
