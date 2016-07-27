@@ -88,6 +88,19 @@ class CtorIC implements ArrayAccess, Countable, Iterator{
     }
 
     /**
+     * @param $key
+     * @return mixed
+     */
+    public function make($key) {
+        if (class_exists($key, true) || interface_exists($key, true)) {
+            return $this->instance(new ReflectionClass($key));
+        } else if (isset($this->dependenciesMap[$key])){
+            return $this->dependenciesMap[$key];
+        }
+        throw new CtorICException("Can not make Key \${$key}");
+    }
+
+    /**
      * 将callable参数注入后 返回一个无参闭包对象
      * @param callable $callable
      * @return Closure
@@ -109,16 +122,17 @@ class CtorIC implements ArrayAccess, Countable, Iterator{
     /**
      * 根据配置,获取反射方法实参
      * @param ReflectionMethod $method
+     * @param [] $circleCheck
      * @return array
      */
-    public function getArguments(ReflectionMethod $method) {
+    protected function getArguments(ReflectionMethod $method, $circleCheck = []) {
         $arguments = [];
         foreach($method->getParameters() as $parameter) {
             // TODO: php7 if($parameter->hasType()) { $reflectionType = $parameter->getType(); }
             $parameterClazz = $parameter->getClass();
             if ($parameterClazz != null) {
                 // 有类型提示 function(TypeHint $para, ...), 根据TypeHint查找依赖
-                $arguments[] = $this->instance($parameterClazz);
+                $arguments[] = $this->instance($parameterClazz, $circleCheck);
             } else {
                 // 无类型提示 function($argName) 根据实参变量名"argName"查找依赖
                 $name = $parameter->name;
@@ -148,16 +162,17 @@ class CtorIC implements ArrayAccess, Countable, Iterator{
     /**
      * 根据反射类构造函数自动注入依赖实例化
      * @param ReflectionClass $clazz
+     * @param array $circleCheck
      * @return object
      */
-    protected function _instanceNew(ReflectionClass $clazz) {
+    protected function _instanceNew(ReflectionClass $clazz, $circleCheck) {
         if (!$clazz->isInstantiable()) {
             throw new CtorICException("Cannot instantiate class {$clazz->name}");
         }
         $ctorMethod = $clazz->getConstructor();
         // PHP7: try {} catch (Throwable $e) { throw new IoCException($e->getMessage(), $e->getCode()); }
         if ($ctorMethod !== null) {
-            return $clazz->newInstanceArgs($this->getArguments($ctorMethod));
+            return $clazz->newInstanceArgs($this->getArguments($ctorMethod, $circleCheck));
         } else {
             return $clazz->newInstanceWithoutConstructor();
         }
@@ -166,12 +181,13 @@ class CtorIC implements ArrayAccess, Countable, Iterator{
     /**
      * 单例模式实例化对象
      * @param ReflectionClass $clazz
+     * @param $circleCheck
      * @return object
      */
-    protected function _instanceOnce(ReflectionClass $clazz) {
+    protected function _instanceOnce(ReflectionClass $clazz, $circleCheck) {
         $name = $clazz->name;
         if (!isset($this->instancesMap[$name])) {
-            $this->instancesMap[$name] = $this->_instanceNew($clazz);
+            $this->instancesMap[$name] = $this->_instanceNew($clazz, $circleCheck);
         }
         return $this->instancesMap[$name];
     }
@@ -179,38 +195,56 @@ class CtorIC implements ArrayAccess, Countable, Iterator{
     /**
      * 根据配置自动实例化对象
      * @param ReflectionClass $clazz
+     * @param array $circleCheck
      * @return object
      */
-    protected function _instance(ReflectionClass $clazz) {
+    protected function _instance(ReflectionClass $clazz, $circleCheck) {
         $isSingleton = isset($this->singletonClassNames[$clazz->name]);
         if ($isSingleton) {
-            return $this->_instanceOnce($clazz);
+            return $this->_instanceOnce($clazz, $circleCheck);
         } else {
-            return $this->_instanceNew($clazz);
+            return $this->_instanceNew($clazz, $circleCheck);
+        }
+    }
+
+    /**
+     * @param string $depClassName
+     * @param array $toCheck
+     */
+    private function circleDependencyCheck($depClassName, &$toCheck) {
+        if (in_array($depClassName, $toCheck, true)) {
+            $toCheck[] = $depClassName;
+            $path = implode(" -> ", $toCheck);
+            throw new CircleDependencyException("Found Circle Dependency In Path $path");
+        } else {
+            $toCheck[] = $depClassName;
         }
     }
 
     /**
      * 根据配置,从接口或者类获取依赖对象
      * @param ReflectionClass $parameterClazz
+     * @param array $circleCheck
      * @return object
      */
-    protected function instance(ReflectionClass $parameterClazz) {
+    protected function instance(ReflectionClass $parameterClazz, $circleCheck = []) {
         $clazzName = $parameterClazz->name;
-        if (interface_exists($clazzName)) {
+        if ($parameterClazz->isInterface()) {
             if (!isset($this->dependenciesMap[$clazzName])) {
                 throw new CtorICException("Interface \"{$clazzName}\" Implements Class Not Found");
             }
             // 处理多态
             $implementedClazzName = (string) $this->dependenciesMap[$clazzName];
-            if (!class_exists($implementedClazzName)) {
+            if (!class_exists($implementedClazzName, true)) {
                 throw new CtorICException("Interface \"{$clazzName}\" Implements Class \"{$implementedClazzName}\" Not Found");
             }
             if (!is_subclass_of($implementedClazzName, $clazzName)) {
                 throw new CtorICException("{$implementedClazzName} Does Not Implements {$clazzName}");
             }
-            return $this->_instance(new ReflectionClass($implementedClazzName));
-        } else if (class_exists($clazzName)) {
+
+            $this->circleDependencyCheck($implementedClazzName, $circleCheck);
+            return $this->_instance(new ReflectionClass($implementedClazzName), $circleCheck);
+        } else {
             // 处理多态
             if (isset($this->dependenciesMap[$clazzName])) {
                 $subClazzName = (string) $this->dependenciesMap[$clazzName];
@@ -218,14 +252,17 @@ class CtorIC implements ArrayAccess, Countable, Iterator{
                 if (!is_subclass_of($subClazzName, $clazzName)) {
                     throw new CtorICException("{$subClazzName} Is Not SubClass Of {$clazzName}");
                 }
-                return $this->_instance(new ReflectionClass($subClazzName));
+
+                $this->circleDependencyCheck($subClazzName, $circleCheck);
+                return $this->_instance(new ReflectionClass($subClazzName), $circleCheck);
             } else {
-                return $this->_instance($parameterClazz);
+
+                $this->circleDependencyCheck($parameterClazz->getName(), $circleCheck);
+                return $this->_instance($parameterClazz, $circleCheck);
             }
-        } else {
-            throw new CtorICException("ParameterType {$clazzName} Not Found");
         }
     }
 }
 
 class CtorICException extends RuntimeException {}
+class CircleDependencyException extends RuntimeException {}

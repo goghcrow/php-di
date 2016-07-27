@@ -133,29 +133,30 @@ $newThis->prop = "hello";
 // Warning:  Cannot bind closure to scope of internal class Closure
 // $normalClosure->call($normalClosure);
 
-assert($normalClosure->call(new scope) === "hello");
+// PHP7
+// assert($normalClosure->call(new scope) === "hello");
 // ===================================================================================
 
 
-abstract class absClass {}
-$clazz = new \ReflectionClass(absClass::class);
-try {
-    $clazz->newInstanceWithoutConstructor();
-    assert(false);
-} catch (\Throwable $e) {
-    assert($e);
-}
+//abstract class absClass {}
+//$clazz = new \ReflectionClass(absClass::class);
+//try {
+//    $clazz->newInstanceWithoutConstructor();
+//    assert(false);
+//} catch (\Throwable $e) {
+//    assert($e);
+//}
 
 class privateCtor {
     private function __construct(){}
 }
-$clazz = new \ReflectionClass(privateCtor::class);
-try {
-    $clazz->newInstance();
-    assert(false);
-} catch (\Throwable $e) {
-    assert($e);
-}
+//$clazz = new \ReflectionClass(privateCtor::class);
+//try {
+//    $clazz->newInstance();
+//    assert(false);
+//} catch (\Throwable $e) {
+//    assert($e);
+//}
 // ===================================================================================
 
 
