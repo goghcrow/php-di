@@ -64,10 +64,6 @@ class EE {
 class FF {}
 
 
-/*
-xiaofeng\DD -> xiaofeng\EE -> xiaofeng\AA -> xiaofeng\BB -> xiaofeng\CC -> xiaofeng\AA'
-*/
-
 $di = new CtorIC([
     IAA::class => AA::class,
 ]);
@@ -78,5 +74,5 @@ try {
     assert(false);
 } catch (CircleDependencyException $ex) {
     assert($ex->getMessage() ===
-        'Found Circle Dependency In Path xiaofeng\DD -> xiaofeng\EE -> xiaofeng\AA -> xiaofeng\BB -> xiaofeng\CC -> xiaofeng\AA');
+        'Found Circle Dependency In Path xiaofeng\DD -> xiaofeng\EE -> xiaofeng\FF -> xiaofeng\AA -> xiaofeng\BB -> xiaofeng\CC -> xiaofeng\AA');
 }
